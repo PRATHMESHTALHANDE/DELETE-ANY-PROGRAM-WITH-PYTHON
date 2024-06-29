@@ -137,8 +137,9 @@ def main():
         run_as_admin()
 
     programs = []
+    restart_program = True
     
-    while True:
+    while restart_program:
         print("\nOptions:")
         print("1. List installed programs")
         print("2. Uninstall a program")
@@ -193,10 +194,11 @@ def main():
                     print(f"{index}. {program}")
         elif choice == '4':
             print("Restarting the program...")
-            break
+            restart_program = True
+            programs = []  # Reset programs list
         elif choice == '5':
             print("Exiting the program.")
-            sys.exit(0)
+            restart_program = False
         else:
             print("Invalid choice. Please try again.")
 
