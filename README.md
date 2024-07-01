@@ -1,7 +1,6 @@
 # DELETE-ANY-PROGRAM-WITH-PYTHON
 Hi guys, I have created python script to uninstall any program. This code provides a complete program for managing installed applications on a Windows system, including listing, searching, and uninstalling programs.
 
-Imports
 import subprocess
 import sys
 import os
@@ -10,28 +9,24 @@ import winreg
 import pyautogui
 import time
 
-subprocess: Module for running subprocesses, like command line commands.
-sys: Provides access to some variables used or maintained by the interpreter and to functions that interact strongly with the interpreter.
-os: Module for interacting with the operating system, including file and directory operations.
-ctypes: A foreign function library for Python, used to call functions in DLLs or shared libraries.
-winreg: Module for accessing and modifying the Windows registry.
-pyautogui: Module for controlling the mouse and keyboard.
-time: Module providing various time-related functions.
-
-Function Definitions
-
+# Check if the script is running with administrative privileges
 def is_admin():
+    """
+    Checks if the script is running with administrative privileges.
+
+    Returns:
+        bool: True if the script is running as an administrator, False otherwise.
+    """
     try:
-        return os.getuid() == 0
+        return os.getuid() == 0  # Unix-based systems
     except AttributeError:
-        return ctypes.windll.shell32.IsUserAnAdmin() != 0
+        return ctypes.windll.shell32.IsUserAnAdmin() != 0  # Windows systems
 
-Checks if the script is running with administrative privileges.
-Uses os.getuid() for Unix-based systems.
-Uses ctypes.windll.shell32.IsUserAnAdmin() for Windows.
-
-
+# Attempt to re-run the script with administrative privileges if not already running as an administrator
 def run_as_admin():
+    """
+    Attempts to re-run the script with administrative privileges if it is not already running as an administrator.
+    """
     if not is_admin():
         script = os.path.abspath(sys.argv[0])
         params = ' '.join([script] + sys.argv[1:])
@@ -41,12 +36,14 @@ def run_as_admin():
             raise OSError(f"Error: {ret}")
         sys.exit(0)
 
-
-Attempts to restart the script with administrative privileges if it is not already running as an admin.
-Uses ShellExecuteW with the "runas" verb to elevate privileges.
-
-
+# Retrieve a list of installed programs on the system
 def get_installed_programs():
+    """
+    Retrieves a list of installed programs on the system.
+
+    Returns:
+        list of tuple: A list of tuples containing the display name and registry path of each installed program.
+    """
     programs = []
 
     def enum_key(key, path):
@@ -77,12 +74,17 @@ def get_installed_programs():
 
     return programs
 
-
-Retrieves a list of installed programs from the Windows registry.
-Enumerates subkeys in the Uninstall registry paths to gather program names.
-
-
+# Find the uninstallation command for a given program
 def find_uninstaller(program_name):
+    """
+    Finds the uninstallation command for a given program.
+
+    Args:
+        program_name (str): The name of the program to find the uninstaller for.
+
+    Returns:
+        str: The uninstallation command if found, None otherwise.
+    """
     uninstaller_cmd = None
 
     def enum_key(key, path):
@@ -117,12 +119,14 @@ def find_uninstaller(program_name):
 
     return uninstaller_cmd
 
-
-Finds the uninstallation command for a given program name from the Windows registry.
-Searches through the same Uninstall registry paths as get_installed_programs.
-
-
+# Execute the uninstallation command for a given program
 def run_uninstall_command(command):
+    """
+    Executes the uninstallation command for a given program.
+
+    Args:
+        command (str): The uninstallation command to run.
+    """
     try:
         result = subprocess.run(command, check=True, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         if result.returncode == 0:
@@ -132,12 +136,14 @@ def run_uninstall_command(command):
     except subprocess.CalledProcessError as e:
         print(f"Failed to uninstall the program. Error: {e}")
 
-
-Executes the uninstallation command and handles the output.
-Uses subprocess.run to execute the command and captures any errors.
-
-
+# Open the Programs and Features control panel and search for the specified program
 def open_programs_and_features(program_name):
+    """
+    Opens the Programs and Features control panel and searches for the specified program.
+
+    Args:
+        program_name (str): The name of the program to search for.
+    """
     try:
         SW_HIDE = 0
         STARTF_USESHOWWINDOW = 1
@@ -157,12 +163,15 @@ def open_programs_and_features(program_name):
     except Exception as e:
         print(f"Failed to open Programs and Features: {e}")
 
-
-Opens the Control Panel's "Programs and Features" silently and uses pyautogui to search for the specified program.
-Hides the Control Panel window using ctypes.windll.user32.ShowWindow.
-
-
+# Attempt to uninstall the specified application
 def uninstall_application(application_name):
+    """
+    Attempts to uninstall the specified application either by finding and running its uninstaller command 
+    or by opening the Programs and Features control panel for manual uninstallation.
+
+    Args:
+        application_name (str): The name of the application to uninstall.
+    """
     uninstaller_cmd = find_uninstaller(application_name)
     if uninstaller_cmd:
         print(f"Uninstaller command found: {uninstaller_cmd}")
@@ -172,26 +181,34 @@ def uninstall_application(application_name):
         print(f"Opening Programs and Features for manual uninstallation...")
         open_programs_and_features(application_name)
 
-
-Tries to uninstall the specified application by finding its uninstallation command.
-If no command is found, opens the Control Panel's "Programs and Features" for manual uninstallation.
-
-
+# Filter the list of programs based on the provided search text
 def filter_programs(search_text, programs):
+    """
+    Filters the list of programs based on the provided search text.
+
+    Args:
+        search_text (str): The text to search for in the program names.
+        programs (list of tuple): The list of installed programs.
+
+    Returns:
+        list of tuple: A list of tuples containing the index and program information that match the search text.
+    """
     filtered_programs = [(i, program) for i, program in enumerate(programs, 1) if search_text.lower() in program[0].lower()]
     return filtered_programs
 
-
-Filters the list of programs based on the search text and returns the filtered list.
-
-
+# Main function providing a menu for listing, searching, uninstalling, and restarting the script
 def main():
+    """
+    The main function of the script. Provides a menu for the user to list installed programs, 
+    uninstall a program, search for a program, restart the script, or exit the script.
+    """
     if not is_admin():
         run_as_admin()
 
     programs = []
+    restart_program = True
     
-    while True:
+    while restart_program:
         print("\nOptions:")
         print("1. List installed programs")
         print("2. Uninstall a program")
@@ -246,15 +263,17 @@ def main():
                     print(f"{index}. {program}")
         elif choice == '4':
             print("Restarting the program...")
-            break
+            restart_program = True
+            programs = []  # Reset programs list
         elif choice == '5':
             print("Exiting the program.")
-            sys.exit(0)
+            restart_program = False
         else:
             print("Invalid choice. Please try again.")
 
 if __name__ == "__main__":
     main()
+
 
 The main function is the main loop of the script.
 Checks if the script is running as admin and attempts to elevate if not.
